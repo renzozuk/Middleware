@@ -7,7 +7,6 @@ import java.lang.annotation.Target;
 
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
-public @interface RequestMap {
-
-    String router() default "";
+public @interface RequestMapping {
+    String value() default "";
 }
