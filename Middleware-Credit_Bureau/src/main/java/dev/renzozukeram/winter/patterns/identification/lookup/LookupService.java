@@ -1,4 +1,4 @@
-package dev.renzozukeram.winter.lookup;
+package dev.renzozukeram.winter.patterns.identification.lookup;
 
 import dev.renzozukeram.winter.annotations.RequestMapping;
 
