@@ -1,4 +1,5 @@
 package dev.renzozukeram.winter.patterns.basicRemoting.requestor;
 
-public class Requestor {
+public interface Requestor {
+    Object invoke(String objectId, String operationName, Object... args);
 }

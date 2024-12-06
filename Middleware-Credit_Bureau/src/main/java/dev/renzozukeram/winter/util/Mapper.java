@@ -1,6 +1,6 @@
 package dev.renzozukeram.winter.util;
 
-import dev.renzozukeram.winter.patterns.basicRemoting.marshaller.Marshaller;
+import dev.renzozukeram.winter.patterns.basicRemoting.marshaller.MarshallerImpl;
 
 public class Mapper {
 
@@ -16,7 +16,7 @@ public class Mapper {
             case "java.lang.Long" -> Long.parseLong(value);
             case "java.lang.Double" -> Double.parseDouble(value);
             case "java.lang.Boolean" -> Boolean.parseBoolean(value);
-            default -> Marshaller.deserialize(value, targetType);
+            default -> MarshallerImpl.deserialize(value, targetType);
         };
     }
 }
