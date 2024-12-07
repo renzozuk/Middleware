@@ -1,11 +1,17 @@
 package dev.renzozukeram.winter.patterns.identification;
 
+import java.util.UUID;
+
 public class ObjectId {
 
     private final String id;
 
-    public ObjectId(String id) {
-        this.id = id;
+    public ObjectId() {
+        this.id = UUID.randomUUID().toString();
+    }
+
+    public ObjectId(String predefinedId) {
+        this.id = predefinedId;
     }
 
     public String getId() {
