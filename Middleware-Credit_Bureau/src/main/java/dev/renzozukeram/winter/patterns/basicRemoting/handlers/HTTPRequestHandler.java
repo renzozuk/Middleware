@@ -1,6 +1,8 @@
 package dev.renzozukeram.winter.patterns.basicRemoting.handlers;
 
 import dev.renzozukeram.winter.patterns.basicRemoting.invoker.Invoker;
+import dev.renzozukeram.winter.patterns.identification.AbsoluteObjectReference;
+import dev.renzozukeram.winter.patterns.identification.ObjectId;
 
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
@@ -8,6 +10,8 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.Socket;
 import java.time.format.DateTimeParseException;
+import java.util.Arrays;
+import java.util.List;
 import java.util.StringTokenizer;
 
 public class HTTPRequestHandler implements Runnable, ServerRequestHandler {
@@ -39,6 +43,7 @@ public class HTTPRequestHandler implements Runnable, ServerRequestHandler {
 
             if (httpMethod.equals("GET")) {
                 if (queryParameters[1].equals("heart")) {
+                    invoker.invoke(new AbsoluteObjectReference(socket.getLocalAddress().toString(), socket.getPort(), new ObjectId()), "", new Object[]{}); // adjust this after
                     sendResponse(socket, 200, "beat");
                 } else {
                     try {
