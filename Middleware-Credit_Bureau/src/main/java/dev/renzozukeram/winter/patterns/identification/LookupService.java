@@ -25,15 +25,15 @@ public class LookupService {
         for (Method method : clazz.getDeclaredMethods()) {
 
             if (method.isAnnotationPresent(Get.class)) {
-                remoteObjectMethods.put(method.getAnnotation(Get.class).router(), method);
+                remoteObjectMethods.put(method.getAnnotation(Get.class).value(), method);
             } else if (method.isAnnotationPresent(Post.class)) {
-                remoteObjectMethods.put(method.getAnnotation(Post.class).router(), method);
+                remoteObjectMethods.put(method.getAnnotation(Post.class).value(), method);
             } else if (method.isAnnotationPresent(Put.class)) {
-                remoteObjectMethods.put(method.getAnnotation(Put.class).router(), method);
+                remoteObjectMethods.put(method.getAnnotation(Put.class).value(), method);
             } else if (method.isAnnotationPresent(Patch.class)) {
-                remoteObjectMethods.put(method.getAnnotation(Patch.class).router(), method);
+                remoteObjectMethods.put(method.getAnnotation(Patch.class).value(), method);
             } else if (method.isAnnotationPresent(Delete.class)) {
-                remoteObjectMethods.put(method.getAnnotation(Delete.class).router(), method);
+                remoteObjectMethods.put(method.getAnnotation(Delete.class).value(), method);
             }
         }
     }
