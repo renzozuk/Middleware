@@ -6,8 +6,9 @@ import dev.renzozukeram.winter.annotations.RequestMapping;
 @RequestMapping("/creditbureau")
 public class CreditBureau {
 
-    @Get("/hello")
-    public String hello() {
-        return "hello";
+    @Get
+    public String matchUser() {
+        System.out.println("Match user was called");
+        return "";
     }
 }

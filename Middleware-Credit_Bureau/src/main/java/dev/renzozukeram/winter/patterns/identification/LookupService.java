@@ -8,9 +8,24 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class LookupService {
-    // singleton
-    private final Map<ObjectId, Object> registeredObjects = new ConcurrentHashMap<>();
-    private final Map<String, Method> remoteObjectMethods = new HashMap<>();
+
+    private static final LookupService instance = new LookupService();
+
+    private final Map<ObjectId, Object> registeredObjects;
+    private final Map<String, Method> remoteObjectMethods;
+
+    private LookupService() {
+        registeredObjects = new ConcurrentHashMap<>();
+        remoteObjectMethods = new HashMap<>();
+    }
+
+    public static LookupService getInstance() {
+        if (instance == null) {
+            return new LookupService();
+        }
+
+        return instance;
+    }
 
     public void register(ObjectId id, Object remoteObject) {
         registeredObjects.put(id, remoteObject);

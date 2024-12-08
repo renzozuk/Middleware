@@ -1,6 +1,7 @@
 package dev.renzozukeram.winter.patterns.basicRemoting.invoker;
 
 import dev.renzozukeram.winter.patterns.basicRemoting.exceptions.RemotingError;
+import dev.renzozukeram.winter.patterns.basicRemoting.marshaller.JsonMarshaller;
 import dev.renzozukeram.winter.patterns.basicRemoting.marshaller.Marshaller;
 import dev.renzozukeram.winter.patterns.identification.AbsoluteObjectReference;
 import dev.renzozukeram.winter.patterns.identification.LookupService;
@@ -11,15 +12,13 @@ import java.lang.reflect.Method;
 
 public class Invoker {
 
-    private final Marshaller marshaller;
-    private final LookupService lookupService;
+    private static final Marshaller marshaller = new JsonMarshaller();
 
-    public Invoker(Marshaller marshaller, LookupService lookupService) {
-        this.marshaller = marshaller;
-        this.lookupService = lookupService;
-    }
+    public static Object invoke(AbsoluteObjectReference reference, String methodName, Object[] args) throws InvocationTargetException, IllegalAccessException {
 
-    public Object invoke(AbsoluteObjectReference reference, String methodName, Object[] args) throws InvocationTargetException, IllegalAccessException {
+        var lookupService = LookupService.getInstance();
+
+        System.out.println(reference.getFullReference());
 
         var remoteObject = lookupService.lookup(new ObjectId(reference.getFullReference().split("/")[2]));
 
