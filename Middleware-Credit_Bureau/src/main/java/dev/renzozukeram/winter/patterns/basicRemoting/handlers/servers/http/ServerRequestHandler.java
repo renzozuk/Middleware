@@ -39,7 +39,8 @@ public class ServerRequestHandler implements Runnable, Handler {
             String[] queryParameters = httpQueryString.split("/");
 
             if (httpMethod.equals("GET")) {
-                Invoker.invoke(new AbsoluteObjectReference(socket.getLocalAddress().toString(), socket.getPort(), new ObjectId(queryParameters[1])), queryParameters[2], Arrays.copyOfRange(queryParameters, 3, queryParameters.length));
+                var response = Invoker.invoke(new AbsoluteObjectReference(socket.getLocalAddress().toString(), socket.getPort(), new ObjectId(queryParameters[1])), queryParameters[2], Arrays.copyOfRange(queryParameters, 3, queryParameters.length));
+                System.out.println(response);
                 sendResponse(socket, 200, "GET request received successfully");
             } else if (httpMethod.equals("POST")) {
                 sendResponse(socket, 200, "POST request received successfully");

@@ -8,17 +8,14 @@ import dev.renzozukeram.winter.patterns.identification.LookupService;
 import dev.renzozukeram.winter.patterns.identification.ObjectId;
 
 import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 
 public class Invoker {
 
     private static final Marshaller marshaller = new JsonMarshaller();
 
-    public static Object invoke(AbsoluteObjectReference reference, String methodName, Object[] args) throws InvocationTargetException, IllegalAccessException {
+    public static <T> String invoke(AbsoluteObjectReference reference, String routeName, Object[] args) throws Exception {
 
         var lookupService = LookupService.getInstance();
-
-        System.out.println(reference.getFullReference());
 
         var remoteObject = lookupService.lookup(new ObjectId(reference.getFullReference().split("/")[2]));
 
@@ -26,10 +23,23 @@ public class Invoker {
             throw new RemotingError("Remote object not found");
         }
 
-        for (Method method : remoteObject.getClass().getDeclaredMethods()) {
-            if (method.getName().equals(methodName)) {
-                method.setAccessible(true);
-                return method.invoke(remoteObject, args);
+        for (var node : lookupService.getRemoteObjectMethods().entrySet()) {
+
+            if (routeName.equals(node.getKey().startsWith("/") ? node.getKey().substring(1) : node.getKey())) {
+                node.getValue().setAccessible(true);
+
+                try {
+                    if (node.getValue().getParameterCount() > 0) {
+                        return marshaller.serialize(node.getValue().invoke(remoteObject, args));
+                    } else {
+                        return marshaller.serialize(node.getValue().invoke(remoteObject));
+                    }
+                } catch (IllegalAccessException e) {
+                    throw new RuntimeException(e);
+                } catch (InvocationTargetException e) {
+                    throw new RuntimeException(e);
+                }
+
             }
         }
 

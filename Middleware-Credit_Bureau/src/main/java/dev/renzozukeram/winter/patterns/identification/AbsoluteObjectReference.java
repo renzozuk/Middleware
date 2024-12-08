@@ -25,6 +25,6 @@ public class AbsoluteObjectReference {
     }
 
     public String getFullReference() {
-        return String.format("remote://%s:%d/%s", host, port, objectId.toString());
+        return String.format("%s:%d/%s", host, port, objectId.toString());
     }
 }

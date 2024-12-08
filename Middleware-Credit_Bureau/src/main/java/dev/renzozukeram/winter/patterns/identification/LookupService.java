@@ -11,11 +11,11 @@ public class LookupService {
 
     private static final LookupService instance = new LookupService();
 
-    private final Map<ObjectId, Object> registeredObjects;
+    private final Map<ObjectId, Class<?>> registeredClasses;
     private final Map<String, Method> remoteObjectMethods;
 
     private LookupService() {
-        registeredObjects = new ConcurrentHashMap<>();
+        registeredClasses = new ConcurrentHashMap<>();
         remoteObjectMethods = new HashMap<>();
     }
 
@@ -27,15 +27,23 @@ public class LookupService {
         return instance;
     }
 
-    public void register(ObjectId id, Object remoteObject) {
-        registeredObjects.put(id, remoteObject);
+    public Map<String, Method> getRemoteObjectMethods() {
+        return Map.copyOf(remoteObjectMethods);
     }
 
-    public Object lookup(ObjectId id) {
-        return registeredObjects.get(id);
+    private void register(ObjectId id, Class<?> remoteObject) {
+        registeredClasses.put(id, remoteObject);
+    }
+
+    public Object lookup(ObjectId id) throws Exception {
+        return registeredClasses.get(id).getDeclaredConstructor().newInstance();
     }
 
     public void initializeRoutes(Class<?> clazz) {
+
+        register(new ObjectId(clazz.getAnnotation(RequestMapping.class).value().startsWith("/") ?
+                clazz.getAnnotation(RequestMapping.class).value().substring(1) :
+                clazz.getAnnotation(RequestMapping.class).value()), clazz);
 
         for (Method method : clazz.getDeclaredMethods()) {
 
