@@ -1,5 +1,7 @@
 package dev.renzozukeram.winter.patterns.basicRemoting.handlers.servers.http;
 
+import dev.renzozukeram.winter.message.ResponseEntity;
+import dev.renzozukeram.winter.patterns.basicRemoting.exceptions.RemotingError;
 import dev.renzozukeram.winter.patterns.basicRemoting.handlers.servers.Handler;
 import dev.renzozukeram.winter.patterns.basicRemoting.invoker.Invoker;
 import dev.renzozukeram.winter.patterns.identification.AbsoluteObjectReference;
@@ -38,23 +40,21 @@ public class ServerRequestHandler implements Runnable, Handler {
             String httpQueryString = tokenizer.nextToken();
             String[] queryParameters = httpQueryString.split("/");
 
-            var response = Invoker.invoke(new AbsoluteObjectReference(socket.getLocalAddress().toString(), socket.getPort(), new ObjectId(queryParameters[1])), queryParameters[2], Arrays.copyOfRange(queryParameters, 3, queryParameters.length));
+            var response = queryParameters.length > 2 ?
+                    Invoker.invoke(new AbsoluteObjectReference(socket.getLocalAddress().toString(), socket.getPort(), new ObjectId(queryParameters[1])), queryParameters[2], Arrays.copyOfRange(queryParameters, 3, queryParameters.length)) :
+                    Invoker.invoke(new AbsoluteObjectReference(socket.getLocalAddress().toString(), socket.getPort(), new ObjectId(queryParameters[1]))) ;
 
-            if (httpMethod.equals("GET")) {
-                sendResponse(socket, 200, response);
-            } else if (httpMethod.equals("POST")) {
-                sendResponse(socket, 201, response);
-            } else if (httpMethod.equals("PUT")) {
-                sendResponse(socket, 200, response);
-            } else if (httpMethod.equals("PATCH")) {
-                sendResponse(socket, 200, response);
-            }else if (httpMethod.equals("DELETE")) {
-                sendResponse(socket, 200, response);
+            if (response.getClass() != ResponseEntity.class) {
+                throw new RemotingError("The method must return a ResponseEntity");
+            }
+
+            if (httpMethod.equals("GET") || httpMethod.equals("POST") || httpMethod.equals("PUT") || httpMethod.equals("PATCH") || httpMethod.equals("DELETE")) {
+                sendResponse(socket, response);
             } else {
-                sendResponse(socket, 405, "Method not allowed");
+                sendResponse(socket, new ResponseEntity(405, "HTTP requisition type not supported"));
             }
         } catch (NullPointerException ignored) {} catch (Exception e) {
-            sendResponse(socket, 400, e.getMessage());
+            sendResponse(socket, new ResponseEntity(400, e.getMessage()));
         }
 
         try {
@@ -64,59 +64,49 @@ public class ServerRequestHandler implements Runnable, Handler {
         }
     }
 
-    private void sendResponse(Socket socket, int statusCode, String responseString) {
+    private void sendResponse(Socket socket, ResponseEntity responseEntity) {
 
         String statusLine;
         String serverHeader = "Server: WebServer\r\n";
         String contentTypeHeader = "Content-Type: text/html\r\n";
+        String contentLengthHeader = "Content-Length: " + responseEntity.getSerializedResponse().length() + "\r\n";
 
         try (DataOutputStream out = new DataOutputStream(socket.getOutputStream())) {
-            if (statusCode == 200) {
-                statusLine = "HTTP/1.0 200 OK" + "\r\n";
-                String contentLengthHeader = "Content-Length: " + responseString.length() + "\r\n";
-                out.writeBytes(statusLine);
+            switch (responseEntity.getStatusCode()) {
+                case 200:
+                    statusLine = "HTTP/1.0 200 OK" + "\r\n";
+                    break;
+                case 201:
+                    statusLine = "HTTP/1.0 201 Created" + "\r\n";
+                    break;
+                case 204:
+                    statusLine = "HTTP/1.0 204 No Content" + "\r\n";
+                    break;
+                case 400:
+                    statusLine = "HTTP/1.0 400 Bad Request" + "\r\n";
+                    break;
+                case 405:
+                    statusLine = "HTTP/1.0 405 Method Not Allowed" + "\r\n";
+                    break;
+                case 409:
+                    statusLine = "HTTP/1.0 409 Conflict" + "\r\n";
+                    break;
+                case 500:
+                    statusLine = "HTTP/1.0 500 Internal Server Error" + "\r\n";
+                    break;
+                default:
+                    statusLine = "HTTP/1.0 404 Not Found" + "\r\n";
+                    break;
+            }
+
+            out.writeBytes(statusLine);
+            if (responseEntity.getStatusCode() != 204 && responseEntity.getSerializedResponse() != null) {
                 out.writeBytes(serverHeader);
                 out.writeBytes(contentTypeHeader);
                 out.writeBytes(contentLengthHeader);
                 out.writeBytes("\r\n");
-                out.writeBytes(responseString);
-            } else if (statusCode == 201) {
-                statusLine = "HTTP/1.0 201 Created" + "\r\n";
-                String contentLengthHeader = "Content-Length: " + responseString.length() + "\r\n";
-                out.writeBytes(statusLine);
-                out.writeBytes(serverHeader);
-                out.writeBytes(contentTypeHeader);
-                out.writeBytes(contentLengthHeader);
-                out.writeBytes("\r\n");
-                out.writeBytes(responseString);
-            } else if (statusCode == 204) {
-                statusLine = "HTTP/1.0 204 No Content" + "\r\n";
-                out.writeBytes(statusLine);
-                out.writeBytes("\r\n");
-            } else if (statusCode == 400) {
-                statusLine = "HTTP/1.0 400 Bad Request" + "\r\n";
-                String contentLengthHeader = "Content-Length: " + responseString.length() + "\r\n";
-                out.writeBytes(statusLine);
-                out.writeBytes(serverHeader);
-                out.writeBytes(contentTypeHeader);
-                out.writeBytes(contentLengthHeader);
-                out.writeBytes("\r\n");
-                out.writeBytes(responseString);
-            } else if (statusCode == 405) {
-                statusLine = "HTTP/1.0 405 Method Not Allowed" + "\r\n";
-                out.writeBytes(statusLine);
-                out.writeBytes("\r\n");
-            } else if (statusCode == 409) {
-                statusLine = "HTTP/1.0 409 Conflict" + "\r\n";
-                out.writeBytes(statusLine);
-                out.writeBytes("\r\n");
-            } else if (statusCode == 500) {
-                statusLine = "HTTP/1.0 500 Internal Server Error" + "\r\n";
-                out.writeBytes(statusLine);
-                out.writeBytes("\r\n");
+                out.writeBytes(responseEntity.getSerializedResponse());
             } else {
-                statusLine = "HTTP/1.0 404 Not Found" + "\r\n";
-                out.writeBytes(statusLine);
                 out.writeBytes("\r\n");
             }
         } catch (IOException e) {
