@@ -38,24 +38,23 @@ public class ServerRequestHandler implements Runnable, Handler {
             String httpQueryString = tokenizer.nextToken();
             String[] queryParameters = httpQueryString.split("/");
 
+            var response = Invoker.invoke(new AbsoluteObjectReference(socket.getLocalAddress().toString(), socket.getPort(), new ObjectId(queryParameters[1])), queryParameters[2], Arrays.copyOfRange(queryParameters, 3, queryParameters.length));
+
             if (httpMethod.equals("GET")) {
-                var response = Invoker.invoke(new AbsoluteObjectReference(socket.getLocalAddress().toString(), socket.getPort(), new ObjectId(queryParameters[1])), queryParameters[2], Arrays.copyOfRange(queryParameters, 3, queryParameters.length));
-                System.out.println(response);
-                sendResponse(socket, 200, "GET request received successfully");
+                sendResponse(socket, 200, response);
             } else if (httpMethod.equals("POST")) {
-                sendResponse(socket, 200, "POST request received successfully");
+                sendResponse(socket, 201, response);
             } else if (httpMethod.equals("PUT")) {
-                sendResponse(socket, 200, "PUT request received successfully");
+                sendResponse(socket, 200, response);
             } else if (httpMethod.equals("PATCH")) {
-                sendResponse(socket, 200, "PATCH request received successfully");
+                sendResponse(socket, 200, response);
             }else if (httpMethod.equals("DELETE")) {
-                sendResponse(socket, 200, "DELETE request received successfully");
+                sendResponse(socket, 200, response);
             } else {
-                System.out.println("The HTTP method is not recognized");
-                sendResponse(socket, 405, "Method Not Allowed");
+                sendResponse(socket, 405, "Method not allowed");
             }
         } catch (NullPointerException ignored) {} catch (Exception e) {
-            e.printStackTrace();
+            sendResponse(socket, 400, e.getMessage());
         }
 
         try {
