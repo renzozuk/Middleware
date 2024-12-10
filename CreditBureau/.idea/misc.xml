@@ -4,6 +4,15 @@
     <option name="show" value="ASK" />
     <option name="description" value="" />
   </component>
+  <component name="EntryPointsManager">
+    <list size="5">
+      <item index="0" class="java.lang.String" itemvalue="dev.renzozukeram.winter.annotations.Delete" />
+      <item index="1" class="java.lang.String" itemvalue="dev.renzozukeram.winter.annotations.Get" />
+      <item index="2" class="java.lang.String" itemvalue="dev.renzozukeram.winter.annotations.Patch" />
+      <item index="3" class="java.lang.String" itemvalue="dev.renzozukeram.winter.annotations.Post" />
+      <item index="4" class="java.lang.String" itemvalue="dev.renzozukeram.winter.annotations.Put" />
+    </list>
+  </component>
   <component name="ExternalStorageConfigurationManager" enabled="true" />
   <component name="MavenProjectsManager">
     <option name="originalFiles">

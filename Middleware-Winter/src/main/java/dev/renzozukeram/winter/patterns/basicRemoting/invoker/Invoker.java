@@ -1,16 +1,18 @@
 package dev.renzozukeram.winter.patterns.basicRemoting.invoker;
 
+import dev.renzozukeram.winter.enums.RequisitionType;
 import dev.renzozukeram.winter.message.ResponseEntity;
 import dev.renzozukeram.winter.patterns.basicRemoting.exceptions.RemotingError;
 import dev.renzozukeram.winter.patterns.identification.AbsoluteObjectReference;
 import dev.renzozukeram.winter.patterns.identification.LookupService;
+import dev.renzozukeram.winter.patterns.identification.MethodIdentifier;
 import dev.renzozukeram.winter.patterns.identification.ObjectId;
 
 import java.lang.reflect.InvocationTargetException;
 
 public class Invoker {
 
-    public static ResponseEntity invoke(AbsoluteObjectReference reference) throws Exception {
+    public static ResponseEntity invoke(AbsoluteObjectReference reference, RequisitionType requisitionType) throws Exception {
 
         var lookupService = LookupService.getInstance();
 
@@ -20,10 +22,10 @@ public class Invoker {
             throw new RemotingError("Remote object not found");
         }
 
-        return (ResponseEntity) lookupService.getRemoteObjectMethods().get("").invoke(remoteObject);
+        return (ResponseEntity) lookupService.getRemoteObjectMethods().get(new MethodIdentifier(requisitionType, "")).invoke(remoteObject);
     }
 
-    public static ResponseEntity invoke(AbsoluteObjectReference reference, String routeName, Object[] args) throws Exception {
+    public static ResponseEntity invoke(AbsoluteObjectReference reference, RequisitionType requisitionType, String routeName, Object[] args) throws Exception {
 
         var lookupService = LookupService.getInstance();
 
@@ -35,7 +37,7 @@ public class Invoker {
 
         for (var node : lookupService.getRemoteObjectMethods().entrySet()) {
 
-            if (routeName.equals(node.getKey().startsWith("/") ? node.getKey().substring(1) : node.getKey())) {
+            if (node.getKey().getRequisitionType().equals(requisitionType) && routeName.equals(node.getKey().getRoute().startsWith("/") ? node.getKey().getRoute().substring(1) : node.getKey().getRoute())) {
 
                 node.getValue().setAccessible(true);
 
