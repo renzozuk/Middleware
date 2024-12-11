@@ -15,10 +15,14 @@ import java.io.InputStreamReader;
 import java.net.Socket;
 import java.util.Arrays;
 import java.util.StringTokenizer;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class ServerRequestHandler implements Runnable, Handler {
 
-    private Socket clientSocket;
+    private static final Logger LOGGER = Logger.getLogger(ServerRequestHandler.class.getName());
+
+    private final Socket clientSocket;
 
     public ServerRequestHandler(Socket clientSocket) {
         this.clientSocket = clientSocket;
@@ -26,53 +30,122 @@ public class ServerRequestHandler implements Runnable, Handler {
 
     @Override
     public void run() {
-        handle(clientSocket);
+        try {
+            handle(clientSocket);
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error processing request", e);
+            sendResponse(clientSocket, new ResponseEntity(500, "Internal Server Error"));
+        } finally {
+            if (clientSocket != null && !clientSocket.isClosed() && clientSocket.isConnected()) {
+                try {
+                    clientSocket.close();
+                } catch (IOException e) {
+                    LOGGER.log(Level.WARNING, "Error closing client socket", e);
+                }
+            }
+        }
     }
 
     @Override
     public void handle(Socket socket) {
-
         try (BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
 
-            String headerLine = in.readLine();
-            StringTokenizer tokenizer = new StringTokenizer(headerLine);
-            String httpMethod = tokenizer.nextToken();
+            if (socket.isClosed() || !socket.isConnected()) {
+                LOGGER.warning("Attempt to handle closed or disconnected socket");
+                return;
+            }
 
+            String headerLine = in.readLine();
+            if (headerLine == null || headerLine.isEmpty()) {
+                LOGGER.warning("Received empty request");
+                sendResponse(socket, new ResponseEntity(400, "Bad Request"));
+                return;
+            }
+
+            StringTokenizer tokenizer = new StringTokenizer(headerLine);
+            if (tokenizer.countTokens() < 2) {
+                LOGGER.warning("Malformed request header");
+                sendResponse(socket, new ResponseEntity(400, "Malformed Request"));
+                return;
+            }
+
+            StringBuilder requestBuilder = new StringBuilder();
+            String line;
+            int contentLength = -1;
+
+            while ((line = in.readLine()) != null && !line.isEmpty()) {
+                requestBuilder.append(line).append("\r\n");
+
+                if (line.toLowerCase().startsWith("content-length:")) {
+                    contentLength = Integer.parseInt(line.split(":")[1].trim());
+                }
+            }
+
+            String jsonBody = null;
+            if (contentLength > 0) {
+                char[] bodyChars = new char[contentLength];
+                int charsRead = in.read(bodyChars, 0, contentLength);
+                if (charsRead > 0) {
+                    jsonBody = new String(bodyChars, 0, charsRead);
+                }
+            }
+
+            if (jsonBody != null) {
+                System.out.println(jsonBody);
+            }
+
+            String httpMethod = tokenizer.nextToken();
             String httpQueryString = tokenizer.nextToken();
             String[] queryParameters = httpQueryString.split("/");
 
-            RequisitionType requisitionType = Arrays.stream(RequisitionType.values()).filter(rt -> rt.toString().equals(httpMethod)).findAny().orElseThrow(() -> new RemotingError("Invalid requisition type"));
+            if (queryParameters.length < 2) {
+                LOGGER.warning("Invalid query parameters");
+                sendResponse(socket, new ResponseEntity(400, "Invalid Parameters"));
+                return;
+            }
+
+            RequisitionType requisitionType = Arrays.stream(RequisitionType.values())
+                    .filter(rt -> rt.toString().equals(httpMethod))
+                    .findAny()
+                    .orElseThrow(() -> new RemotingError("Requisition type not supported"));
 
             var response = queryParameters.length > 2 ?
-                    Invoker.invoke(new AbsoluteObjectReference(socket.getLocalAddress().toString(), socket.getPort(), new ObjectId(queryParameters[1])), requisitionType, queryParameters[2], Arrays.copyOfRange(queryParameters, 3, queryParameters.length)) :
-                    Invoker.invoke(new AbsoluteObjectReference(socket.getLocalAddress().toString(), socket.getPort(), new ObjectId(queryParameters[1])), requisitionType) ;
+                    Invoker.invoke(
+                            new AbsoluteObjectReference(socket.getLocalAddress().toString(), socket.getPort(), new ObjectId(queryParameters[1])),
+                            requisitionType,
+                            queryParameters[2],
+                            Arrays.copyOfRange(queryParameters, 3, queryParameters.length)
+                    ) :
+                    Invoker.invoke(
+                            new AbsoluteObjectReference(socket.getLocalAddress().toString(), socket.getPort(), new ObjectId(queryParameters[1])),
+                            requisitionType
+                    );
 
             if (response.getClass() != ResponseEntity.class) {
                 throw new RemotingError("The method must return a ResponseEntity");
             }
 
-            if (httpMethod.equals("GET") || httpMethod.equals("POST") || httpMethod.equals("PUT") || httpMethod.equals("PATCH") || httpMethod.equals("DELETE")) {
+            if (Arrays.asList(RequisitionType.GET, RequisitionType.POST,
+                    RequisitionType.PUT, RequisitionType.PATCH,
+                    RequisitionType.DELETE).contains(requisitionType)) {
                 sendResponse(socket, response);
             } else {
                 sendResponse(socket, new ResponseEntity(405, "HTTP requisition type not supported"));
             }
-        } catch (NullPointerException ignored) {} catch (Exception e) {
-            sendResponse(socket, new ResponseEntity(400, e.getMessage()));
-        }
-
-        try {
-            socket.close();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error processing request", e);
+            sendResponse(socket, new ResponseEntity(500, e.getMessage()));
         }
     }
 
     private void sendResponse(Socket socket, ResponseEntity responseEntity) {
-
-        String statusLine;
+        if (socket == null || socket.isClosed()) {
+            LOGGER.warning("Attempting to send response on closed socket");
+            return;
+        }
 
         try (DataOutputStream out = new DataOutputStream(socket.getOutputStream())) {
-            statusLine = switch (responseEntity.getStatusCode()) {
+            String statusLine = switch (responseEntity.getStatusCode()) {
                 case 100 -> "HTTP/1.0 100 Continue\r\n";
                 case 101 -> "HTTP/1.0 101 Switching Protocols\r\n";
                 case 102 -> "HTTP/1.0 102 Processing\r\n";
@@ -140,16 +213,16 @@ public class ServerRequestHandler implements Runnable, Handler {
 
             out.writeBytes(statusLine);
             if (responseEntity.getStatusCode() != 204 && responseEntity.getSerializedResponse() != null) {
-                out.writeBytes("Server: WebServer\r\n"); // Server header
-                out.writeBytes("Content-Type: text/html\r\n"); // Content type header
-                out.writeBytes("Content-Length: " + responseEntity.getSerializedResponse().length() + "\r\n"); // Content length header
+                out.writeBytes("Server: WebServer\r\n");
+                out.writeBytes("Content-Type: text/html\r\n");
+                out.writeBytes("Content-Length: " + responseEntity.getSerializedResponse().length() + "\r\n");
                 out.writeBytes("\r\n");
                 out.writeBytes(responseEntity.getSerializedResponse());
             } else {
                 out.writeBytes("\r\n");
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.WARNING, "Error sending response", e);
         }
     }
 }

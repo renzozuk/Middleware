@@ -1,5 +1,6 @@
 package dev.renzozukeram.winter.patterns.basicRemoting.invoker;
 
+import dev.renzozukeram.winter.annotations.RequestBody;
 import dev.renzozukeram.winter.enums.RequisitionType;
 import dev.renzozukeram.winter.message.ResponseEntity;
 import dev.renzozukeram.winter.patterns.basicRemoting.exceptions.RemotingError;
@@ -9,6 +10,7 @@ import dev.renzozukeram.winter.patterns.identification.MethodIdentifier;
 import dev.renzozukeram.winter.patterns.identification.ObjectId;
 
 import java.lang.reflect.InvocationTargetException;
+import java.util.Arrays;
 
 public class Invoker {
 
@@ -41,18 +43,21 @@ public class Invoker {
 
                 node.getValue().setAccessible(true);
 
+                var parametersWithRequestBody = Arrays.stream(node.getValue().getParameters()).filter(parameter -> !Arrays.stream(parameter.getAnnotations()).filter(annotation -> annotation.equals(RequestBody.class)).toList().isEmpty()).toList();
+
+                if (parametersWithRequestBody.size() > 1) {
+                    throw new RemotingError("Multiple @RequestBody annotations found");
+                }
+
                 try {
                     if (node.getValue().getParameterCount() > 0) {
                         return (ResponseEntity) node.getValue().invoke(remoteObject, args);
                     } else {
                         return (ResponseEntity) node.getValue().invoke(remoteObject);
                     }
-                } catch (IllegalAccessException e) {
-                    throw new RuntimeException(e);
-                } catch (InvocationTargetException e) {
+                } catch (IllegalAccessException | InvocationTargetException e) {
                     throw new RuntimeException(e);
                 }
-
             }
         }
 
