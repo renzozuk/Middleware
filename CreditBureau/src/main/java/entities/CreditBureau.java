@@ -37,14 +37,26 @@ public class CreditBureau {
     }
 
     @Get("/users")
-    public ResponseEntity getUser(String username) {
+    public ResponseEntity getUser(Integer username) {
         System.out.println("The user " + username + " was called");
         return new ResponseEntity(200, username);
     }
 
     @Post("/users")
-    public ResponseEntity postUser(String username, String password) {
-        System.out.println("The user " + username + " was created");
-        return new ResponseEntity(201, username);
+    public ResponseEntity postUser(@RequestBody User user) {
+        System.out.println("The user " + user.getUsername() + " was created and its password is " + user.getPassword());
+        return new ResponseEntity(201, user.getUsername());
+    }
+
+    @Get("/sum")
+    public ResponseEntity sum(int a, int b) {
+        System.out.println("The sum of " + a + " and " + b + " is " + (a + b));
+        return new ResponseEntity(200, (a + b));
+    }
+
+    @Get("/test")
+    public ResponseEntity test(boolean verifier, @RequestBody User user) {
+        System.out.println(verifier ? "It's true" : "It's false");
+        return new ResponseEntity(200, user);
     }
 }

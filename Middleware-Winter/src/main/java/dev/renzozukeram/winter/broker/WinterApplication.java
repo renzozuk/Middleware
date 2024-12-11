@@ -58,8 +58,7 @@ public class WinterApplication {
         this.hostname = hostname;
         this.port = port;
 
-        var lookup = LookupService.getInstance();
-        lookup.initializeRoutes(clazz);
+        LookupService.getInstance().initializeRoutes(clazz);
     }
 
     public WinterApplication(Class<?>[] classes, String hostname, int port) {
@@ -67,8 +66,7 @@ public class WinterApplication {
         this.hostname = hostname;
         this.port = port;
 
-        var lookup = LookupService.getInstance();
-        lookup.initializeRoutes(classes);
+        LookupService.getInstance().initializeRoutes(classes);
     }
 
     public WinterApplication(Collection<Class<?>> classes, String hostname, int port) {
@@ -76,16 +74,16 @@ public class WinterApplication {
         this.hostname = hostname;
         this.port = port;
 
-        var lookup = LookupService.getInstance();
-        lookup.initializeRoutes(classes);
+        LookupService.getInstance().initializeRoutes(classes);
     }
 
     public void start() {
         try {
-            ServerSocket serverSocket = new ServerSocket(port, 1, InetAddress.getByName("localhost"));
+            ServerSocket serverSocket = new ServerSocket(port, 1, InetAddress.getByName(hostname));
             ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
 
-            System.out.printf("Winter application started.\nWaiting connections on http://%s:%d.\n", "localhost", port);
+            System.out.println("Winter application started.");
+            LookupService.getInstance().getRegisteredClasses().forEach((k, v) -> System.out.printf("Waiting for connections on http://%s:%d/%s.\n", hostname, port, k.getId()));
 
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                 try {

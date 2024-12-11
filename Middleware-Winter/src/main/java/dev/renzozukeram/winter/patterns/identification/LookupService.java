@@ -29,6 +29,10 @@ public class LookupService {
         return instance;
     }
 
+    public Map<ObjectId, Class<?>> getRegisteredClasses() {
+        return Map.copyOf(registeredClasses);
+    }
+
     public Map<MethodIdentifier, Method> getRemoteObjectMethods() {
         return Map.copyOf(remoteObjectMethods);
     }

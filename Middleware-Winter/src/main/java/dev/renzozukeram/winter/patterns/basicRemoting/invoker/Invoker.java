@@ -4,15 +4,22 @@ import dev.renzozukeram.winter.annotations.RequestBody;
 import dev.renzozukeram.winter.enums.RequisitionType;
 import dev.renzozukeram.winter.message.ResponseEntity;
 import dev.renzozukeram.winter.patterns.basicRemoting.exceptions.RemotingError;
+import dev.renzozukeram.winter.patterns.basicRemoting.marshaller.JsonMarshaller;
+import dev.renzozukeram.winter.patterns.basicRemoting.marshaller.Marshaller;
 import dev.renzozukeram.winter.patterns.identification.AbsoluteObjectReference;
 import dev.renzozukeram.winter.patterns.identification.LookupService;
 import dev.renzozukeram.winter.patterns.identification.MethodIdentifier;
 import dev.renzozukeram.winter.patterns.identification.ObjectId;
 
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 public class Invoker {
+
+    private static final Marshaller marshaller = new JsonMarshaller();
 
     public static ResponseEntity invoke(AbsoluteObjectReference reference, RequisitionType requisitionType) throws Exception {
 
@@ -49,9 +56,11 @@ public class Invoker {
                     throw new RemotingError("Multiple @RequestBody annotations found");
                 }
 
+                var parsedArgs = parseArgs(node.getValue(), args);
+
                 try {
                     if (node.getValue().getParameterCount() > 0) {
-                        return (ResponseEntity) node.getValue().invoke(remoteObject, args);
+                        return (ResponseEntity) node.getValue().invoke(remoteObject, parsedArgs);
                     } else {
                         return (ResponseEntity) node.getValue().invoke(remoteObject);
                     }
@@ -62,5 +71,108 @@ public class Invoker {
         }
 
         throw new RemotingError("Method not found");
+    }
+
+    public static ResponseEntity invoke(AbsoluteObjectReference reference, RequisitionType requisitionType, String routeName, Object[] args, String body) throws Exception {
+
+        var lookupService = LookupService.getInstance();
+
+        var remoteObject = lookupService.lookup(new ObjectId(reference.getFullReference().split("/")[2]));
+
+        if (remoteObject == null) {
+            throw new RemotingError("Remote object not found");
+        }
+
+        for (var node : lookupService.getRemoteObjectMethods().entrySet()) {
+
+            if (node.getKey().getRequisitionType().equals(requisitionType) && routeName.equals(node.getKey().getRoute().startsWith("/") ? node.getKey().getRoute().substring(1) : node.getKey().getRoute())) {
+
+                node.getValue().setAccessible(true);
+
+                var parametersWithRequestBody = Arrays.stream(node.getValue().getParameters()).filter(parameter -> !Arrays.stream(parameter.getAnnotations()).filter(annotation -> annotation.equals(RequestBody.class)).toList().isEmpty()).toList();
+
+                if (parametersWithRequestBody.size() > 1) {
+                    throw new RemotingError("Multiple @RequestBody annotations found");
+                }
+
+                var parsedArgs = parseArgs(node.getValue(), args, body);
+
+                try {
+                    if (node.getValue().getParameterCount() > 0) {
+                        return (ResponseEntity) node.getValue().invoke(remoteObject, parsedArgs);
+                    } else {
+                        return (ResponseEntity) node.getValue().invoke(remoteObject);
+                    }
+                } catch (IllegalAccessException | InvocationTargetException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }
+
+        throw new RemotingError("Method not found");
+    }
+
+    private static Object[] parseArgs(Method method, Object[] oldArgs) {
+
+        List<Object> newArgs = new ArrayList<>();
+
+        for (int i = 0; i < method.getParameterCount(); i++) {
+            parseArg(method, oldArgs, newArgs, i, false);
+        }
+
+        return newArgs.toArray();
+    }
+
+    private static Object[] parseArgs(Method method, Object[] oldArgs, String jsonBody) {
+
+        List<Object> newArgs = new ArrayList<>();
+
+        boolean requestBodyAdded = false;
+
+        for (int i = 0; i < method.getParameterCount(); i++) {
+            if (method.getParameters()[i].isAnnotationPresent(RequestBody.class)) {
+                newArgs.add(marshaller.deserialize(jsonBody, method.getParameterTypes()[i]));
+                requestBodyAdded = true;
+            } else {
+                parseArg(method, oldArgs, newArgs, i, requestBodyAdded);
+            }
+        }
+
+        return newArgs.toArray();
+    }
+
+    private static void parseArg(Method method, Object[] args, List<Object> newArgs, int currentIndex, boolean requestBodyAdded) {
+
+        var searchIndex = requestBodyAdded ? currentIndex - 1 : currentIndex;
+
+        switch (method.getParameterTypes()[currentIndex].getSimpleName()) {
+            case "boolean", "Boolean":
+                newArgs.add(Boolean.parseBoolean((String) args[searchIndex]));
+                break;
+            case "byte", "Byte":
+                newArgs.add(Byte.parseByte((String) args[searchIndex]));
+                break;
+            case "char", "Character":
+                if (((String) args[searchIndex]).length() != 1) {
+                    throw new IllegalArgumentException("Character argument must be a single character");
+                }
+                newArgs.add(((String) args[searchIndex]).charAt(0));
+                break;
+            case "double", "Double":
+                newArgs.add(Double.parseDouble((String) args[searchIndex]));
+                break;
+            case "float", "Float":
+                newArgs.add(Float.parseFloat((String) args[searchIndex]));
+                break;
+            case "int", "Integer":
+                newArgs.add(Integer.parseInt((String) args[searchIndex]));
+                break;
+            case "long", "Long":
+                newArgs.add(Long.parseLong((String) args[searchIndex]));
+                break;
+            case "short", "Short":
+                newArgs.add(Short.parseShort((String) args[searchIndex]));
+                break;
+        }
     }
 }

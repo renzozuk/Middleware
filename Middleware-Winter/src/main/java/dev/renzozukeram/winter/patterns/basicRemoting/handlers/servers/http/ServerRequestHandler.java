@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.Socket;
 import java.util.Arrays;
+import java.util.List;
 import java.util.StringTokenizer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -90,10 +91,6 @@ public class ServerRequestHandler implements Runnable, Handler {
                 }
             }
 
-            if (jsonBody != null) {
-                System.out.println(jsonBody);
-            }
-
             String httpMethod = tokenizer.nextToken();
             String httpQueryString = tokenizer.nextToken();
             String[] queryParameters = httpQueryString.split("/");
@@ -110,12 +107,18 @@ public class ServerRequestHandler implements Runnable, Handler {
                     .orElseThrow(() -> new RemotingError("Requisition type not supported"));
 
             var response = queryParameters.length > 2 ?
-                    Invoker.invoke(
+                    ((jsonBody != null) ? Invoker.invoke(
+                            new AbsoluteObjectReference(socket.getLocalAddress().toString(), socket.getPort(), new ObjectId(queryParameters[1])),
+                            requisitionType,
+                            queryParameters[2],
+                            Arrays.copyOfRange(queryParameters, 3, queryParameters.length),
+                            jsonBody
+                    ) : Invoker.invoke(
                             new AbsoluteObjectReference(socket.getLocalAddress().toString(), socket.getPort(), new ObjectId(queryParameters[1])),
                             requisitionType,
                             queryParameters[2],
                             Arrays.copyOfRange(queryParameters, 3, queryParameters.length)
-                    ) :
+                    )) :
                     Invoker.invoke(
                             new AbsoluteObjectReference(socket.getLocalAddress().toString(), socket.getPort(), new ObjectId(queryParameters[1])),
                             requisitionType
@@ -125,13 +128,14 @@ public class ServerRequestHandler implements Runnable, Handler {
                 throw new RemotingError("The method must return a ResponseEntity");
             }
 
-            if (Arrays.asList(RequisitionType.GET, RequisitionType.POST,
-                    RequisitionType.PUT, RequisitionType.PATCH,
-                    RequisitionType.DELETE).contains(requisitionType)) {
+            if (List.of(RequisitionType.GET, RequisitionType.POST, RequisitionType.PUT, RequisitionType.PATCH, RequisitionType.DELETE).contains(requisitionType)) {
                 sendResponse(socket, response);
             } else {
                 sendResponse(socket, new ResponseEntity(405, "HTTP requisition type not supported"));
             }
+        } catch (IllegalArgumentException e) {
+            LOGGER.log(Level.SEVERE, "Bad request", e);
+            sendResponse(socket, new ResponseEntity(400, e.getMessage()));
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error processing request", e);
             sendResponse(socket, new ResponseEntity(500, e.getMessage()));
@@ -139,6 +143,7 @@ public class ServerRequestHandler implements Runnable, Handler {
     }
 
     private void sendResponse(Socket socket, ResponseEntity responseEntity) {
+
         if (socket == null || socket.isClosed()) {
             LOGGER.warning("Attempting to send response on closed socket");
             return;
