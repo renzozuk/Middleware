@@ -119,10 +119,14 @@ public class ServerRequestHandler implements Runnable, Handler {
                             queryParameters[2],
                             Arrays.copyOfRange(queryParameters, 3, queryParameters.length)
                     )) :
-                    Invoker.invoke(
+                    ((jsonBody != null) ? Invoker.invoke(
                             new AbsoluteObjectReference(socket.getLocalAddress().toString(), socket.getPort(), new ObjectId(queryParameters[1])),
-                            requisitionType
-                    );
+                            requisitionType,
+                            jsonBody
+                    ) : Invoker.invoke(
+                        new AbsoluteObjectReference(socket.getLocalAddress().toString(), socket.getPort(), new ObjectId(queryParameters[1])),
+                        requisitionType
+                    ));
 
             if (response.getClass() != ResponseEntity.class) {
                 throw new RemotingError("The method must return a ResponseEntity");

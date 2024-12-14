@@ -34,6 +34,23 @@ public class Invoker {
         return (ResponseEntity) lookupService.getRemoteObjectMethods().get(new MethodIdentifier(requisitionType, "")).invoke(remoteObject);
     }
 
+    public static ResponseEntity invoke(AbsoluteObjectReference reference, RequisitionType requisitionType, String body) throws Exception {
+
+        var lookupService = LookupService.getInstance();
+
+        var remoteObject = lookupService.lookup(new ObjectId(reference.getFullReference().split("/")[2]));
+
+        if (remoteObject == null) {
+            throw new RemotingError("Remote object not found");
+        }
+
+        var method = lookupService.getRemoteObjectMethods().get(new MethodIdentifier(requisitionType, ""));
+
+        var arg = marshaller.deserialize(body, method.getParameterTypes()[0]);
+
+        return (ResponseEntity) method.invoke(remoteObject, arg);
+    }
+
     public static ResponseEntity invoke(AbsoluteObjectReference reference, RequisitionType requisitionType, String routeName, Object[] args) throws Exception {
 
         var lookupService = LookupService.getInstance();
@@ -173,6 +190,8 @@ public class Invoker {
             case "short", "Short":
                 newArgs.add(Short.parseShort((String) args[searchIndex]));
                 break;
+            default:
+                newArgs.add(args[searchIndex]);
         }
     }
 }
