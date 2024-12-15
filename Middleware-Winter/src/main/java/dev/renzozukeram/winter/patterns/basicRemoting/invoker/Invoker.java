@@ -4,6 +4,7 @@ import dev.renzozukeram.winter.annotations.RequestBody;
 import dev.renzozukeram.winter.enums.RequisitionType;
 import dev.renzozukeram.winter.message.ResponseEntity;
 import dev.renzozukeram.winter.patterns.basicRemoting.exceptions.RemotingError;
+import dev.renzozukeram.winter.patterns.basicRemoting.exceptions.UnexpectedArgumentException;
 import dev.renzozukeram.winter.patterns.basicRemoting.marshaller.JsonMarshaller;
 import dev.renzozukeram.winter.patterns.basicRemoting.marshaller.Marshaller;
 import dev.renzozukeram.winter.patterns.identification.AbsoluteObjectReference;
@@ -164,31 +165,59 @@ public class Invoker {
 
         switch (method.getParameterTypes()[currentIndex].getSimpleName()) {
             case "boolean", "Boolean":
-                newArgs.add(Boolean.parseBoolean((String) args[searchIndex]));
+                var argContent = (String) args[searchIndex];
+                if (!argContent.equalsIgnoreCase("true") && !argContent.equalsIgnoreCase("false")) {
+                    throw new UnexpectedArgumentException(method.getParameterTypes()[currentIndex].getSimpleName(), argContent);
+                }
+                newArgs.add(Boolean.parseBoolean(argContent.toLowerCase()));
                 break;
             case "byte", "Byte":
-                newArgs.add(Byte.parseByte((String) args[searchIndex]));
+                try {
+                    newArgs.add(Byte.parseByte((String) args[searchIndex]));
+                } catch (NumberFormatException e) {
+                    throw new UnexpectedArgumentException(method.getParameterTypes()[currentIndex].getSimpleName(), (String) args[searchIndex]);
+                }
                 break;
             case "char", "Character":
                 if (((String) args[searchIndex]).length() != 1) {
-                    throw new IllegalArgumentException("Character argument must be a single character");
+                    throw new UnexpectedArgumentException(method.getParameterTypes()[currentIndex].getSimpleName(), (String) args[searchIndex]);
                 }
                 newArgs.add(((String) args[searchIndex]).charAt(0));
                 break;
             case "double", "Double":
-                newArgs.add(Double.parseDouble((String) args[searchIndex]));
+                try {
+                    newArgs.add(Double.parseDouble((String) args[searchIndex]));
+                } catch (NumberFormatException e) {
+                    throw new UnexpectedArgumentException(method.getParameterTypes()[currentIndex].getSimpleName(), (String) args[searchIndex]);
+                }
                 break;
             case "float", "Float":
-                newArgs.add(Float.parseFloat((String) args[searchIndex]));
+                try {
+                    newArgs.add(Float.parseFloat((String) args[searchIndex]));
+                } catch (NumberFormatException e) {
+                    throw new UnexpectedArgumentException(method.getParameterTypes()[currentIndex].getSimpleName(), (String) args[searchIndex]);
+                }
                 break;
             case "int", "Integer":
-                newArgs.add(Integer.parseInt((String) args[searchIndex]));
+                try {
+                    newArgs.add(Integer.parseInt((String) args[searchIndex]));
+                } catch (NumberFormatException e) {
+                    throw new UnexpectedArgumentException(method.getParameterTypes()[currentIndex].getSimpleName(), (String) args[searchIndex]);
+                }
                 break;
             case "long", "Long":
-                newArgs.add(Long.parseLong((String) args[searchIndex]));
+                try {
+                    newArgs.add(Long.parseLong((String) args[searchIndex]));
+                } catch (NumberFormatException e) {
+                    throw new UnexpectedArgumentException(method.getParameterTypes()[currentIndex].getSimpleName(), (String) args[searchIndex]);
+                }
                 break;
             case "short", "Short":
-                newArgs.add(Short.parseShort((String) args[searchIndex]));
+                try {
+                    newArgs.add(Short.parseShort((String) args[searchIndex]));
+                } catch (NumberFormatException e) {
+                    throw new UnexpectedArgumentException(method.getParameterTypes()[currentIndex].getSimpleName(), (String) args[searchIndex]);
+                }
                 break;
             default:
                 newArgs.add(args[searchIndex]);

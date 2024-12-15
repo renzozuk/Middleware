@@ -16,4 +16,9 @@ public class Calculator {
     public ResponseEntity minus(double a, double b) {
         return new ResponseEntity(200, String.format("%.2f minus %.2f is %.2f", a, b, a - b));
     }
+
+    @Get("/test")
+    public ResponseEntity test(int a) {
+        return new ResponseEntity(200, a);
+    }
 }

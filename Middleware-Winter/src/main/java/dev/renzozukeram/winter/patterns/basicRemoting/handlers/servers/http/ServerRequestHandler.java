@@ -3,6 +3,8 @@ package dev.renzozukeram.winter.patterns.basicRemoting.handlers.servers.http;
 import dev.renzozukeram.winter.enums.RequisitionType;
 import dev.renzozukeram.winter.message.ResponseEntity;
 import dev.renzozukeram.winter.patterns.basicRemoting.exceptions.RemotingError;
+import dev.renzozukeram.winter.patterns.basicRemoting.exceptions.RequisitionTypeNotSupportedException;
+import dev.renzozukeram.winter.patterns.basicRemoting.exceptions.UnexpectedArgumentException;
 import dev.renzozukeram.winter.patterns.basicRemoting.handlers.servers.Handler;
 import dev.renzozukeram.winter.patterns.basicRemoting.invoker.Invoker;
 import dev.renzozukeram.winter.patterns.identification.AbsoluteObjectReference;
@@ -14,7 +16,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.Socket;
 import java.util.Arrays;
-import java.util.List;
+import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -59,14 +61,14 @@ public class ServerRequestHandler implements Runnable, Handler {
             String headerLine = in.readLine();
             if (headerLine == null || headerLine.isEmpty()) {
                 LOGGER.warning("Received empty request");
-                sendResponse(socket, new ResponseEntity(400, "Bad Request"));
+                sendResponse(socket, new ResponseEntity(400, "Bad request."));
                 return;
             }
 
             StringTokenizer tokenizer = new StringTokenizer(headerLine);
             if (tokenizer.countTokens() < 2) {
                 LOGGER.warning("Malformed request header");
-                sendResponse(socket, new ResponseEntity(400, "Malformed Request"));
+                sendResponse(socket, new ResponseEntity(400, "Malformed request."));
                 return;
             }
 
@@ -101,41 +103,40 @@ public class ServerRequestHandler implements Runnable, Handler {
                 return;
             }
 
-            RequisitionType requisitionType = Arrays.stream(RequisitionType.values())
-                    .filter(rt -> rt.toString().equals(httpMethod))
-                    .findAny()
-                    .orElseThrow(() -> new RemotingError("Requisition type not supported"));
+            try {
+                RequisitionType requisitionType = Arrays.stream(RequisitionType.values())
+                        .filter(rt -> rt.toString().equals(httpMethod))
+                        .findAny()
+                        .orElseThrow(() -> new RequisitionTypeNotSupportedException(httpMethod, Arrays.toString(RequisitionType.values())));
+                try {
+                    var response = queryParameters.length > 2 ?
+                            ((jsonBody != null) ? Invoker.invoke(
+                                    new AbsoluteObjectReference(socket.getLocalAddress().toString(), socket.getPort(), new ObjectId(queryParameters[1])),
+                                    requisitionType,
+                                    queryParameters[2],
+                                    Arrays.copyOfRange(queryParameters, 3, queryParameters.length),
+                                    jsonBody
+                            ) : Invoker.invoke(
+                                    new AbsoluteObjectReference(socket.getLocalAddress().toString(), socket.getPort(), new ObjectId(queryParameters[1])),
+                                    requisitionType,
+                                    queryParameters[2],
+                                    Arrays.copyOfRange(queryParameters, 3, queryParameters.length)
+                            )) :
+                            ((jsonBody != null) ? Invoker.invoke(
+                                    new AbsoluteObjectReference(socket.getLocalAddress().toString(), socket.getPort(), new ObjectId(queryParameters[1])),
+                                    requisitionType,
+                                    jsonBody
+                            ) : Invoker.invoke(
+                                    new AbsoluteObjectReference(socket.getLocalAddress().toString(), socket.getPort(), new ObjectId(queryParameters[1])),
+                                    requisitionType
+                            ));
 
-            var response = queryParameters.length > 2 ?
-                    ((jsonBody != null) ? Invoker.invoke(
-                            new AbsoluteObjectReference(socket.getLocalAddress().toString(), socket.getPort(), new ObjectId(queryParameters[1])),
-                            requisitionType,
-                            queryParameters[2],
-                            Arrays.copyOfRange(queryParameters, 3, queryParameters.length),
-                            jsonBody
-                    ) : Invoker.invoke(
-                            new AbsoluteObjectReference(socket.getLocalAddress().toString(), socket.getPort(), new ObjectId(queryParameters[1])),
-                            requisitionType,
-                            queryParameters[2],
-                            Arrays.copyOfRange(queryParameters, 3, queryParameters.length)
-                    )) :
-                    ((jsonBody != null) ? Invoker.invoke(
-                            new AbsoluteObjectReference(socket.getLocalAddress().toString(), socket.getPort(), new ObjectId(queryParameters[1])),
-                            requisitionType,
-                            jsonBody
-                    ) : Invoker.invoke(
-                        new AbsoluteObjectReference(socket.getLocalAddress().toString(), socket.getPort(), new ObjectId(queryParameters[1])),
-                        requisitionType
-                    ));
-
-            if (response.getClass() != ResponseEntity.class) {
-                throw new RemotingError("The method must return a ResponseEntity");
-            }
-
-            if (List.of(RequisitionType.GET, RequisitionType.POST, RequisitionType.PUT, RequisitionType.PATCH, RequisitionType.DELETE).contains(requisitionType)) {
-                sendResponse(socket, response);
-            } else {
-                sendResponse(socket, new ResponseEntity(405, "HTTP requisition type not supported"));
+                    sendResponse(socket, response);
+                } catch (UnexpectedArgumentException e) {
+                    sendResponse(socket, new ResponseEntity(400, e.getMessage()));
+                }
+            } catch (RequisitionTypeNotSupportedException e) {
+                sendResponse(socket, new ResponseEntity(400, e.getMessage()));
             }
         } catch (IllegalArgumentException e) {
             LOGGER.log(Level.SEVERE, "Bad request", e);
