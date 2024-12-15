@@ -49,10 +49,4 @@ public class CreditBureau {
         customerDao.deleteCustomer(id);
         return new ResponseEntity(204);
     }
-
-    @Get("/sum")
-    public ResponseEntity sum(int a, double b) {
-        System.out.println("The sum of " + a + " and " + b + " is " + (a + b));
-        return new ResponseEntity(200, (a + b));
-    }
 }
