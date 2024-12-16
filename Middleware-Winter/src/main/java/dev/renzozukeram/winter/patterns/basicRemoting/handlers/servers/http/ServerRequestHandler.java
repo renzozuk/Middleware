@@ -135,15 +135,17 @@ public class ServerRequestHandler implements Runnable, Handler {
                 } catch (UnexpectedArgumentException e) {
                     sendResponse(socket, new ResponseEntity(400, e.getMessage()));
                 }
-            } catch (RequisitionTypeNotSupportedException e) {
-                sendResponse(socket, new ResponseEntity(400, e.getMessage()));
+            } catch (RequisitionTypeNotSupportedException | IllegalArgumentException e) {
+                e.printStackTrace();
+                sendResponse(socket, new ResponseEntity(400, e.getMessage() != null ? e.getMessage() : ""));
+            } catch (Exception e) {
+                e.printStackTrace();
+                sendResponse(socket, new ResponseEntity(500, e.getMessage() != null ? e.getMessage() : ""));
             }
         } catch (IllegalArgumentException e) {
             LOGGER.log(Level.SEVERE, "Bad request", e);
-            sendResponse(socket, new ResponseEntity(400, e.getMessage()));
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error processing request", e);
-            sendResponse(socket, new ResponseEntity(500, e.getMessage()));
         }
     }
 
