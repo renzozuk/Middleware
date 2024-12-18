@@ -2,7 +2,6 @@ package dev.renzozukeram.winter.patterns.basicRemoting.handlers.servers.http;
 
 import dev.renzozukeram.winter.enums.RequisitionType;
 import dev.renzozukeram.winter.message.ResponseEntity;
-import dev.renzozukeram.winter.patterns.basicRemoting.exceptions.RemotingError;
 import dev.renzozukeram.winter.patterns.basicRemoting.exceptions.RequisitionTypeNotSupportedException;
 import dev.renzozukeram.winter.patterns.basicRemoting.exceptions.UnexpectedArgumentException;
 import dev.renzozukeram.winter.patterns.basicRemoting.handlers.servers.Handler;
@@ -16,7 +15,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.Socket;
 import java.util.Arrays;
-import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.logging.Level;
 import java.util.logging.Logger;

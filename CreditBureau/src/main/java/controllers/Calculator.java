@@ -1,8 +1,12 @@
 package controllers;
 
 import dev.renzozukeram.winter.annotations.Get;
+import dev.renzozukeram.winter.annotations.Post;
+import dev.renzozukeram.winter.annotations.RequestBody;
 import dev.renzozukeram.winter.annotations.RequestMapping;
 import dev.renzozukeram.winter.message.ResponseEntity;
+import exceptions.InvalidOperatorException;
+import model.entities.Operation;
 
 @RequestMapping("/calculator")
 public class Calculator {
@@ -17,8 +21,12 @@ public class Calculator {
         return new ResponseEntity(200, String.format("%.2f minus %.2f is %.2f", a, b, a - b));
     }
 
-    @Get("/test")
-    public ResponseEntity test(int a) {
-        return new ResponseEntity(200, a);
+    @Post("/calculate")
+    public ResponseEntity calculate(@RequestBody Operation operation) {
+        try {
+            return new ResponseEntity(200, operation.calculate());
+        } catch (InvalidOperatorException e) {
+            return new ResponseEntity(400, e.getMessage());
+        }
     }
 }

@@ -21,10 +21,9 @@ import java.util.List;
 public class Invoker {
 
     private static final Marshaller marshaller = new JsonMarshaller();
+    private static final LookupService lookupService = LookupService.getInstance();
 
     public static ResponseEntity invoke(AbsoluteObjectReference reference, RequisitionType requisitionType) throws Exception {
-
-        var lookupService = LookupService.getInstance();
 
         var remoteObject = lookupService.lookup(new ObjectId(reference.getFullReference().split("/")[2]));
 
@@ -36,8 +35,6 @@ public class Invoker {
     }
 
     public static ResponseEntity invoke(AbsoluteObjectReference reference, RequisitionType requisitionType, String body) throws Exception {
-
-        var lookupService = LookupService.getInstance();
 
         var remoteObject = lookupService.lookup(new ObjectId(reference.getFullReference().split("/")[2]));
 
@@ -53,8 +50,6 @@ public class Invoker {
     }
 
     public static ResponseEntity invoke(AbsoluteObjectReference reference, RequisitionType requisitionType, String routeName, Object[] args) throws Exception {
-
-        var lookupService = LookupService.getInstance();
 
         var remoteObject = lookupService.lookup(new ObjectId(reference.getFullReference().split("/")[2]));
 
@@ -92,8 +87,6 @@ public class Invoker {
     }
 
     public static ResponseEntity invoke(AbsoluteObjectReference reference, RequisitionType requisitionType, String routeName, Object[] args, String body) throws Exception {
-
-        var lookupService = LookupService.getInstance();
 
         var remoteObject = lookupService.lookup(new ObjectId(reference.getFullReference().split("/")[2]));
 
