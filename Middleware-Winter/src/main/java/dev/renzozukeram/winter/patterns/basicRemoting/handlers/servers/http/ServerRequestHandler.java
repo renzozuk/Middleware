@@ -14,8 +14,11 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.Socket;
+import java.net.SocketException;
 import java.util.Arrays;
 import java.util.StringTokenizer;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -24,9 +27,16 @@ public class ServerRequestHandler implements Runnable, Handler {
     private static final Logger LOGGER = Logger.getLogger(ServerRequestHandler.class.getName());
 
     private final Socket clientSocket;
+//    private final Semaphore semaphore;
 
-    public ServerRequestHandler(Socket clientSocket) {
+    public ServerRequestHandler(Socket clientSocket/*, Semaphore semaphore*/) {
         this.clientSocket = clientSocket;
+//        this.semaphore = semaphore;
+        try {
+            clientSocket.setSoTimeout(5000);
+        } catch (SocketException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override
