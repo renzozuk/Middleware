@@ -7,10 +7,8 @@ import dev.renzozukeram.winter.patterns.basicRemoting.exceptions.RemotingError;
 import dev.renzozukeram.winter.patterns.basicRemoting.exceptions.UnexpectedArgumentException;
 import dev.renzozukeram.winter.patterns.basicRemoting.marshaller.JsonMarshaller;
 import dev.renzozukeram.winter.patterns.basicRemoting.marshaller.Marshaller;
-import dev.renzozukeram.winter.patterns.identification.AbsoluteObjectReference;
 import dev.renzozukeram.winter.patterns.identification.LookupService;
 import dev.renzozukeram.winter.patterns.identification.MethodIdentifier;
-import dev.renzozukeram.winter.patterns.identification.ObjectId;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -23,24 +21,12 @@ public class Invoker {
     private static final Marshaller marshaller = new JsonMarshaller();
     private static final LookupService lookupService = LookupService.getInstance();
 
-    public static ResponseEntity invoke(AbsoluteObjectReference reference, RequisitionType requisitionType) throws Exception {
 
-        var remoteObject = lookupService.lookup(new ObjectId(reference.getFullReference().split("/")[2]));
-
-        if (remoteObject == null) {
-            throw new RemotingError("Remote object not found");
-        }
-
+    public static ResponseEntity invoke(Object remoteObject, RequisitionType requisitionType) throws Exception {
         return (ResponseEntity) lookupService.getRemoteObjectMethods().get(new MethodIdentifier(requisitionType, "")).invoke(remoteObject);
     }
 
-    public static ResponseEntity invoke(AbsoluteObjectReference reference, RequisitionType requisitionType, String body) throws Exception {
-
-        var remoteObject = lookupService.lookup(new ObjectId(reference.getFullReference().split("/")[2]));
-
-        if (remoteObject == null) {
-            throw new RemotingError("Remote object not found");
-        }
+    public static ResponseEntity invoke(Object remoteObject, RequisitionType requisitionType, String body) throws Exception {
 
         var method = lookupService.getRemoteObjectMethods().get(new MethodIdentifier(requisitionType, ""));
 
@@ -49,13 +35,7 @@ public class Invoker {
         return (ResponseEntity) method.invoke(remoteObject, arg);
     }
 
-    public static ResponseEntity invoke(AbsoluteObjectReference reference, RequisitionType requisitionType, String routeName, Object[] args) throws Exception {
-
-        var remoteObject = lookupService.lookup(new ObjectId(reference.getFullReference().split("/")[2]));
-
-        if (remoteObject == null) {
-            throw new RemotingError("Remote object not found");
-        }
+    public static ResponseEntity invoke(Object remoteObject, RequisitionType requisitionType, String routeName, Object[] args) throws Exception {
 
         for (var node : lookupService.getRemoteObjectMethods().entrySet()) {
 
@@ -86,13 +66,7 @@ public class Invoker {
         throw new RemotingError("Method not found");
     }
 
-    public static ResponseEntity invoke(AbsoluteObjectReference reference, RequisitionType requisitionType, String routeName, Object[] args, String body) throws Exception {
-
-        var remoteObject = lookupService.lookup(new ObjectId(reference.getFullReference().split("/")[2]));
-
-        if (remoteObject == null) {
-            throw new RemotingError("Remote object not found");
-        }
+    public static ResponseEntity invoke(Object remoteObject, RequisitionType requisitionType, String routeName, Object[] args, String body) throws Exception {
 
         for (var node : lookupService.getRemoteObjectMethods().entrySet()) {
 

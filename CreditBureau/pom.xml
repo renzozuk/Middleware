@@ -12,7 +12,7 @@
         <dependency>
             <groupId>dev.renzozuk</groupId>
             <artifactId>middleware-winter</artifactId>
-            <version>1.1.5</version>
+            <version>1.1.9</version>
         </dependency>
         <dependency>
             <groupId>org.postgresql</groupId>

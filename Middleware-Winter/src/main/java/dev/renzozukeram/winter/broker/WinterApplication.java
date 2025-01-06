@@ -11,14 +11,12 @@ import java.net.Socket;
 import java.util.Collection;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
 public class WinterApplication {
 
     private final String hostname;
     private final int port;
-//    private final Semaphore semaphore = new Semaphore(1);
 
     public WinterApplication(Class<?> clazz) {
         this(clazz, "localhost", 8080);
@@ -109,8 +107,8 @@ public class WinterApplication {
 
             while (!Thread.currentThread().isInterrupted()) {
                 try {
-                    Socket clientSocket = serverSocket.accept();
-                    executor.execute(new ServerRequestHandler(clientSocket/*, semaphore*/));
+                    Socket socket = serverSocket.accept();
+                    executor.execute(new ServerRequestHandler(socket));
                 } catch (IOException e) {
                     if (!serverSocket.isClosed()) {
                         System.err.println("Error accepting connection: " + e.getMessage());

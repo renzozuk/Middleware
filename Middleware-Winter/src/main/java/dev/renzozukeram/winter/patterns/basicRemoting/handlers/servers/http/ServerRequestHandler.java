@@ -7,6 +7,7 @@ import dev.renzozukeram.winter.patterns.basicRemoting.exceptions.UnexpectedArgum
 import dev.renzozukeram.winter.patterns.basicRemoting.handlers.servers.Handler;
 import dev.renzozukeram.winter.patterns.basicRemoting.invoker.Invoker;
 import dev.renzozukeram.winter.patterns.identification.AbsoluteObjectReference;
+import dev.renzozukeram.winter.patterns.identification.LookupService;
 import dev.renzozukeram.winter.patterns.identification.ObjectId;
 
 import java.io.BufferedReader;
@@ -17,23 +18,20 @@ import java.net.Socket;
 import java.net.SocketException;
 import java.util.Arrays;
 import java.util.StringTokenizer;
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class ServerRequestHandler implements Runnable, Handler {
 
     private static final Logger LOGGER = Logger.getLogger(ServerRequestHandler.class.getName());
+    private static final LookupService lookupService = LookupService.getInstance();
 
-    private final Socket clientSocket;
-//    private final Semaphore semaphore;
+    private final Socket socket;
 
-    public ServerRequestHandler(Socket clientSocket/*, Semaphore semaphore*/) {
-        this.clientSocket = clientSocket;
-//        this.semaphore = semaphore;
+    public ServerRequestHandler(Socket socket) {
+        this.socket = socket;
         try {
-            clientSocket.setSoTimeout(5000);
+            socket.setSoTimeout(5000);
         } catch (SocketException e) {
             throw new RuntimeException(e);
         }
@@ -42,14 +40,14 @@ public class ServerRequestHandler implements Runnable, Handler {
     @Override
     public void run() {
         try {
-            handle(clientSocket);
+            handle(socket);
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error processing request", e);
-            sendResponse(clientSocket, new ResponseEntity(500, "Internal Server Error"));
+            sendResponse(socket, new ResponseEntity(500, "Internal Server Error"));
         } finally {
-            if (clientSocket != null && !clientSocket.isClosed() && clientSocket.isConnected()) {
+            if (socket != null && !socket.isClosed() && socket.isConnected()) {
                 try {
-                    clientSocket.close();
+                    socket.close();
                 } catch (IOException e) {
                     LOGGER.log(Level.WARNING, "Error closing client socket", e);
                 }
@@ -117,29 +115,36 @@ public class ServerRequestHandler implements Runnable, Handler {
                         .findAny()
                         .orElseThrow(() -> new RequisitionTypeNotSupportedException(httpMethod, Arrays.toString(RequisitionType.values())));
                 try {
+
+                    var absoluteObjectReference = new AbsoluteObjectReference(socket.getLocalAddress().toString(), socket.getPort(), new ObjectId(queryParameters[1]));
+
+                    var remoteObject = lookupService.lookup(new ObjectId(absoluteObjectReference.getFullReference().split("/")[2]));
+
                     var response = queryParameters.length > 2 ?
                             ((jsonBody != null) ? Invoker.invoke(
-                                    new AbsoluteObjectReference(socket.getLocalAddress().toString(), socket.getPort(), new ObjectId(queryParameters[1])),
+                                    remoteObject,
                                     requisitionType,
                                     queryParameters[2],
                                     Arrays.copyOfRange(queryParameters, 3, queryParameters.length),
                                     jsonBody
                             ) : Invoker.invoke(
-                                    new AbsoluteObjectReference(socket.getLocalAddress().toString(), socket.getPort(), new ObjectId(queryParameters[1])),
+                                    remoteObject,
                                     requisitionType,
                                     queryParameters[2],
                                     Arrays.copyOfRange(queryParameters, 3, queryParameters.length)
                             )) :
                             ((jsonBody != null) ? Invoker.invoke(
-                                    new AbsoluteObjectReference(socket.getLocalAddress().toString(), socket.getPort(), new ObjectId(queryParameters[1])),
+                                    remoteObject,
                                     requisitionType,
                                     jsonBody
                             ) : Invoker.invoke(
-                                    new AbsoluteObjectReference(socket.getLocalAddress().toString(), socket.getPort(), new ObjectId(queryParameters[1])),
+                                    remoteObject,
                                     requisitionType
                             ));
 
                     sendResponse(socket, response);
+                } catch (NullPointerException e) {
+                    sendResponse(socket, new ResponseEntity(400, "Remote object not found."));
                 } catch (UnexpectedArgumentException e) {
                     sendResponse(socket, new ResponseEntity(400, e.getMessage()));
                 }

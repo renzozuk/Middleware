@@ -21,7 +21,7 @@ public class CreditBureau {
 
         var response = customerDao.findCustomerById(id);
 
-        if (response == null ){
+        if (response == null) {
             return new ResponseEntity(404, "Customer not found.");
         } else {
             return new ResponseEntity(200, response);
