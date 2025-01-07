@@ -35,7 +35,7 @@ public class Invoker {
         return (ResponseEntity) method.invoke(remoteObject, arg);
     }
 
-    public static ResponseEntity invoke(Object remoteObject, RequisitionType requisitionType, String routeName, Object[] args) throws Exception {
+    public static ResponseEntity invoke(Object remoteObject, RequisitionType requisitionType, String routeName, Object[] args) {
 
         for (var node : lookupService.getRemoteObjectMethods().entrySet()) {
 
@@ -66,7 +66,7 @@ public class Invoker {
         throw new RemotingError("Method not found");
     }
 
-    public static ResponseEntity invoke(Object remoteObject, RequisitionType requisitionType, String routeName, Object[] args, String body) throws Exception {
+    public static ResponseEntity invoke(Object remoteObject, RequisitionType requisitionType, String routeName, Object[] args, String body) {
 
         for (var node : lookupService.getRemoteObjectMethods().entrySet()) {
 

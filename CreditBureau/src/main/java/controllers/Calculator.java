@@ -11,6 +11,11 @@ import model.entities.Operation;
 @RequestMapping("/calculator")
 public class Calculator {
 
+    @Get
+    public ResponseEntity nothing() {
+        return new ResponseEntity(200, "There's nothing to return here.");
+    }
+
     @Get("/sum")
     public ResponseEntity sum(double a, double b) {
         return new ResponseEntity(200, String.format("The sum of %.2f and %.2f is %.2f", a, b, a + b));

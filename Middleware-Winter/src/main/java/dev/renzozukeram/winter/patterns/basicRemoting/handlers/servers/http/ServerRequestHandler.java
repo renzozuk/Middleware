@@ -2,6 +2,7 @@ package dev.renzozukeram.winter.patterns.basicRemoting.handlers.servers.http;
 
 import dev.renzozukeram.winter.enums.RequisitionType;
 import dev.renzozukeram.winter.message.ResponseEntity;
+import dev.renzozukeram.winter.patterns.basicRemoting.exceptions.RemotingError;
 import dev.renzozukeram.winter.patterns.basicRemoting.exceptions.RequisitionTypeNotSupportedException;
 import dev.renzozukeram.winter.patterns.basicRemoting.exceptions.UnexpectedArgumentException;
 import dev.renzozukeram.winter.patterns.basicRemoting.handlers.servers.Handler;
@@ -49,7 +50,7 @@ public class ServerRequestHandler implements Runnable, Handler {
                 try {
                     socket.close();
                 } catch (IOException e) {
-                    LOGGER.log(Level.WARNING, "Error closing client socket", e);
+                    LOGGER.log(Level.WARNING, "Error closing socket", e);
                 }
             }
         }
@@ -143,16 +144,16 @@ public class ServerRequestHandler implements Runnable, Handler {
                             ));
 
                     sendResponse(socket, response);
-                } catch (NullPointerException e) {
-                    sendResponse(socket, new ResponseEntity(400, "Remote object not found."));
                 } catch (UnexpectedArgumentException e) {
                     sendResponse(socket, new ResponseEntity(400, e.getMessage()));
+                } catch (RemotingError e) {
+                    sendResponse(socket, new ResponseEntity(500, "Requested method not found."));
+                } catch (NullPointerException e) {
+                    sendResponse(socket, new ResponseEntity(500, "Remote object not found."));
                 }
             } catch (RequisitionTypeNotSupportedException | IllegalArgumentException e) {
-                e.printStackTrace();
                 sendResponse(socket, new ResponseEntity(400, e.getMessage() != null ? e.getMessage() : ""));
             } catch (Exception e) {
-                e.printStackTrace();
                 sendResponse(socket, new ResponseEntity(500, e.getMessage() != null ? e.getMessage() : ""));
             }
         } catch (IllegalArgumentException e) {
